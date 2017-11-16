@@ -4,12 +4,18 @@ from flask import request
 import pandas as pd
 import numpy as np
 import random
+import csv
 
 app = Flask('bootcamp')
 
-ratings_list = [i.strip().split("::") for i in open('../data/ratings.dat', 'r').readlines()]
-users_list = [i.strip().split("::") for i in open('../data/users.dat', 'r').readlines()]
-movies_list = [i.strip().split("::") for i in open('../data/movies.dat', encoding = "ISO-8859-1").readlines()]
+ratings_list = [i.strip().split(",") for i in open('../data/ratings.csv', 'r').readlines()]
+
+with open('../data/movies.csv') as csvfile:
+    reader = csv.reader(csvfile)
+    movies_list = [row for row in reader]
+
+ratings_list = ratings_list[1:];
+movies_list = movies_list[1:];
 
 def recommend_movies(predictions_df, userID, movies_df, original_ratings_df, num_recommendations=5):
     
@@ -43,9 +49,6 @@ def handle_post(json_body):
 	user_id = json_body['user_id']
 	ratings = json_body['']
 
-	ratings_list = ratings_list[1:];
-	movies_list = movies_list[1:];
-
 	ratings = np.array(ratings_list)
 	movies = np.array(movies_list)
 
@@ -58,8 +61,8 @@ def handle_post(json_body):
 
 	R_df = ratings_df.pivot(index = 'UserID', columns ='MovieID', values = 'Rating').fillna(0)
 	R_df.head()
-
-	R = R_df.as_matrix()
+	R1 = R_df.as_matrix()
+	R = [[float(y) for y in x] for x in R1]
 	user_ratings_mean = np.mean(R, axis = 1)
 	R_demeaned = R - user_ratings_mean.reshape(-1, 1)
 
@@ -74,10 +77,11 @@ def handle_post(json_body):
 	preds_df.head()
 
 def handle_get():
-	user_id = len(users_list) + 1
+	idx = len(ratings_list) - 1
+	user_id = int(ratings_list[idx][0]) + 1
 	movies = random.sample(movies_list, 6)
 	movie_list = [{'id':movie[0], 'name':movie[1], 'genres':movie[2].split('|')} for movie in movies]
-	return jsonify({'movies':movie_list})
+	return jsonify({'user_id':user_id,'movies':movie_list})
 
 @app.route('/recommendation', methods=['POST', 'GET'])
 def recommendation():
