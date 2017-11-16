@@ -1,6 +1,7 @@
 from flask import Flask
 from flask import jsonify
 from flask import request
+from flask_cors import CORS
 import pandas as pd
 import numpy as np
 import random
@@ -8,6 +9,7 @@ import csv
 import time
 
 app = Flask('bootcamp')
+CORS(app)
 
 ratings_list = [i.strip().split(",") for i in open('../data/ratings.csv', 'r').readlines()]
 
