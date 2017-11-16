@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import random
 import csv
+import time
 
 app = Flask('bootcamp')
 
@@ -17,7 +18,7 @@ with open('../data/movies.csv') as csvfile:
 ratings_list = ratings_list[1:];
 movies_list = movies_list[1:];
 
-def recommend_movies(predictions_df, userID, movies_df, original_ratings_df, num_recommendations=5):
+def recommend_movies(preds_df, userID, movies_df, original_ratings_df, num_recommendations=5):
     
     # Get and sort the user's predictions
     user_row_number = userID - 1 # UserID starts at 1, not 0
@@ -45,14 +46,20 @@ def recommend_movies(predictions_df, userID, movies_df, original_ratings_df, num
     return user_full, recommendations
 
 def handle_post(json_body):
-
+	print('handle_post')
 	user_id = json_body['user_id']
-	ratings = json_body['']
+	ip_movies = json_body['movies']
 
+	for movie in ip_movies:
+		ratings_list.append([user_id,movie['id'],movie['rating'],time.time()])
+
+	print('appended rating')
 	ratings = np.array(ratings_list)
 	movies = np.array(movies_list)
 
 	ratings_df = pd.DataFrame(ratings_list, columns = ['UserID', 'MovieID', 'Rating', 'Timestamp'], dtype = int)
+	#ratings_df.drop_duplicates(keep=False)
+
 	movies_df = pd.DataFrame(movies_list, columns = ['MovieID', 'Title', 'Genres'])
 	movies_df['MovieID'] = movies_df['MovieID'].apply(pd.to_numeric)
 
@@ -71,10 +78,17 @@ def handle_post(json_body):
 
 	sigma = np.diag(sigma)
 
+	print('predicting...')
+
 	all_user_predicted_ratings = np.dot(np.dot(U, sigma), Vt) + user_ratings_mean.reshape(-1, 1)
 
 	preds_df = pd.DataFrame(all_user_predicted_ratings, columns = R_df.columns)
 	preds_df.head()
+
+	already_rated, predictions = recommend_movies(preds_df, int(user_id), movies_df, ratings_df, 10)
+
+	print('predicted ' + str(predictions))
+	return predictions.to_json()
 
 def handle_get():
 	idx = len(ratings_list) - 1
@@ -83,10 +97,13 @@ def handle_get():
 	movie_list = [{'id':movie[0], 'name':movie[1], 'genres':movie[2].split('|')} for movie in movies]
 	return jsonify({'user_id':user_id,'movies':movie_list})
 
-@app.route('/recommendation', methods=['POST', 'GET'])
+@app.route('/recommendation', methods=['GET','POST'])
 def recommendation():
+	print('recommending...')
 	if (request.method == 'POST'):
+		print('handling post method...')
 		return handle_post(request.json)
 	elif (request.method == 'GET'):
+		print('handling get method...')
 		return handle_get()
 	
