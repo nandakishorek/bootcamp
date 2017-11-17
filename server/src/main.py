@@ -88,9 +88,17 @@ def handle_post(json_body):
 	preds_df.head()
 
 	already_rated, predictions = recommend_movies(preds_df, int(user_id), movies_df, ratings_df, 10)
-
 	print('predicted ' + str(predictions))
-	return predictions.to_json()
+	moviesL = []
+	for eachTitle in predictions["Title"]:
+		eachM = {}
+		eachM["name"] = eachTitle
+		moviesL.append(eachM)
+	idx = 0
+	for eachGenre in predictions['Genres']:
+		moviesL[idx]["genres"] = eachGenre.split('|')
+		idx = idx + 1
+	return jsonify({'movies': moviesL})
 
 def handle_get():
 	idx = len(ratings_list) - 1
